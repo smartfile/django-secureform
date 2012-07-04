@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.forms import widgets
 from django.forms.util import ErrorDict
+from django.forms.forms import pretty_name, NON_FIELD_ERRORS, BoundField
 from django.utils import simplejson
 from django.utils.translation import ugettext as _
 from django.utils.safestring import mark_safe
@@ -22,9 +23,6 @@ function %(function)s(n) {
 %(obfuscated)s
 </script>'''
 
-# Duplicated from django.forms, can't be imported!
-NON_FIELD_ERRORS = '__all__'
-
 # Allow the user to specify an encryption key separate from the Django
 # SECRET_KEY if they wish.
 DEFAULT_CRYPT_KEY = getattr(settings, 'SECUREFORM_CRYPT_KEY', getattr(settings, 'SECRET_KEY', None))
@@ -39,26 +37,23 @@ def random_name(choices=SAFE_CHARS, length=16):
     return ''.join(random.sample(choices, length))
 
 
-# Duplicated from django.forms, can't be imported!
-def pretty_name(name):
-    if not name:
-        return u''
-    return name.replace('_', ' ').capitalize()
+class SecureFormException(Exception):
+    "Base exception for security faults."
 
 
-class StaleFormException(Exception):
+class StaleFormException(SecureFormException):
     "Raised if a form's timestamp is too old."
 
 
-class ReplayedFormException(Exception):
+class ReplayedFormException(SecureFormException):
     "Raised if a form's nonce value has been seen before."
 
 
-class HoneypotFormException(Exception):
+class HoneypotFormException(SecureFormException):
     "Raised if a honeypot field receives a value."
 
 
-class InvalidFormException(Exception):
+class InvalidFormException(SecureFormException):
     "Raised if a fields do not map properly."
 
 
@@ -69,6 +64,17 @@ class HoneypotField(forms.CharField):
             'max_length': 16,
         })
         super(HoneypotField, self).__init__(*args, **kwargs)
+
+
+class SecureBoundField(BoundField):
+    def _errors(self):
+        """
+        Translates errors from field's secure name to the regular name (which is
+        how errors are stored in the form.)
+        """
+        name = self.form._secure_field_map.get(self.name)
+        return self.form.errors.get(name, self.form.error_class())
+    errors = property(_errors)
 
 
 class SecureForm(forms.Form):
@@ -99,8 +105,9 @@ class SecureForm(forms.Form):
         self.include_jquery = kwargs.pop('include_jquery', DEFAULT_INCLUDE_JQUERY)
         crypt_key = kwargs.pop('crypt_key', DEFAULT_CRYPT_KEY)
         self.crypt = Blowfish.new(crypt_key)
-        self.fields[self.secure_field_name] = forms.CharField(required=True, widget=widgets.HiddenInput)
+        self.fields[self.secure_field_name] = forms.CharField(required=False, widget=widgets.HiddenInput)
         self.__secured = False
+        self._secure_field_map = {}
 
     def __iter__(self):
         if not self.__secured:
@@ -109,6 +116,14 @@ class SecureForm(forms.Form):
             self.secure_data()
         for name in self.fields:
             yield self[name]
+
+    def __getitem__(self, name):
+        "Returns a BoundField with the given name."
+        try:
+            field = self.fields[name]
+        except KeyError:
+            raise KeyError('Key %r not found in Form' % name)
+        return SecureBoundField(self, field, name)
 
     def _script(self):
         honeypots = [n for (n, f) in self.fields.items() if isinstance(f, HoneypotField)]
@@ -135,8 +150,7 @@ class SecureForm(forms.Form):
     def decode_data(self):
         if not self.is_bound:
             return
-        import pdb; pdb.set_trace()
-        data = {}
+        cleaned_data = {}
         secure = self.data[self.secure_field_name]
         secure = self.crypt.decrypt(secure.decode('hex')).rstrip()
         secure = simplejson.loads(secure)
@@ -144,7 +158,7 @@ class SecureForm(forms.Form):
         if timestamp < time.time() - self.form_ttl:
             # Form data is too old, reject the form.
             raise StaleFormException(_('The form data is more than %s seconds old.') %
-                                      self.form_ttl)
+                                       self.form_ttl)
         nonce = secure['n']
         if cache.get(nonce) != None:
             # Our nonce is in our cache, it has been seend, possible replay!
@@ -152,9 +166,10 @@ class SecureForm(forms.Form):
         # We only need to keep the nonce around for as long as the ttl (timeout). After
         # that, the timestamp check will refuse the form.
         cache.set(nonce, nonce, self.form_ttl)
-        for sname, name in secure['f'].items():
+        self._secure_field_map = secure['f']
+        for sname, name in self._secure_field_map.items():
             if name == self.secure_field_name:
-                data[name] = self.data[name]
+                cleaned_data[name] = self.data[name]
                 continue
             if name is None:
                 # This field is a honeypot.
@@ -163,26 +178,29 @@ class SecureForm(forms.Form):
                     raise HoneypotFormException(_('Unexpected value in form field.'))
                 continue
             try:
-                data[name] = self.data[sname]
+                cleaned_data[name] = self.data[sname]
             except KeyError:
                 raise InvalidFormException(_('Form data contains invalid fields.'))
-        return data
+        self.data = cleaned_data
 
-    def full_clean(self):
+    def _clean_secure(self):
         "Uses decode_data() to convert fields back to their rightful names."
-        self._errors = ErrorDict()
         try:
-            self.data = self.decode_data()
-        except (StaleFormException, ReplayedFormException), e:
+            self.decode_data()
+        except SecureFormException, e:
             self._errors[NON_FIELD_ERRORS] = self.error_class([str(e)])
         except Exception, e:
             self._errors[NON_FIELD_ERRORS] = self.error_class([_('Form verification failed. Please try again.')])
+
+    def full_clean(self):
+        "Does secureform validation, then regular validation."
+        self._errors = ErrorDict()
+        self._clean_secure()
         if not self._errors:
             super(SecureForm, self).full_clean()
 
     def secure_data(self):
         "Prepares the secure data before the form is rendered."
-        field_map = {}
         # Rename the real fields, create a map of new random names to the rightful
         # name
         for name in self.fields.keys():
@@ -190,7 +208,7 @@ class SecureForm(forms.Form):
                 continue
             sname = random_name()
             field = self.fields.pop(name)
-            field_map[sname] = name
+            self._secure_field_map[sname] = name
             self.fields[sname] = field
             # Preserve the field name unless there is an explicit label:
             if not field.label:
@@ -199,14 +217,14 @@ class SecureForm(forms.Form):
         # Add in some honeypots (if asked to).
         for i in range(1, self.honeypots):
             sname = random_name()
-            field_map[sname] = None
+            self._secure_field_map[sname] = None
             # Don't always put the honeypot fields at the end of the form.
             i = random.randint(0, len(self.fields) - 1)
             self.fields.insert(i, sname, HoneypotField())
         secure = {
             't': time.time(),
             'n': random_name(),
-            'f': field_map,
+            'f': self._secure_field_map,
         }
         secure = simplejson.dumps(secure)
         # Pad to length divisible by 8.
