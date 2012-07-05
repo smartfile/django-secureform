@@ -132,6 +132,8 @@ class SecureForm(forms.Form):
         return SecureBoundField(self, field, name)
 
     def _script(self):
+        if not self.honeypots:
+            return ''
         honeypots = [n for (n, f) in self.fields.items() if isinstance(f, HoneypotField)]
         func = random_name(choices=string.letters)
         name = random_name(choices=string.letters, length=2)
