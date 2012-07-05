@@ -102,13 +102,15 @@ class SecureForm(forms.Form):
          legitimate or not. However, this activity will be cost prohibitive for spammers.
     """
 
+    secure_field_name = DEFAULT_FIELD_NAME
+    form_ttl = DEFAULT_FORM_TTL
+    honeypots = DEFAULT_HONEYPOTS
+    include_jquery = DEFAULT_INCLUDE_JQUERY
+
+
     def __init__(self, *args, **kwargs):
         super(SecureForm, self).__init__(*args, **kwargs)
         # Use defaults, unless the caller overrode them.
-        self.secure_field_name = kwargs.pop('secure_field_name', DEFAULT_FIELD_NAME)
-        self.form_ttl = kwargs.pop('form_ttl', DEFAULT_FORM_TTL)
-        self.honeypots = kwargs.pop('honeypots', DEFAULT_HONEYPOTS)
-        self.include_jquery = kwargs.pop('include_jquery', DEFAULT_INCLUDE_JQUERY)
         crypt_key = kwargs.pop('crypt_key', DEFAULT_CRYPT_KEY)
         self.crypt = Blowfish.new(crypt_key)
         self.fields[self.secure_field_name] = InitialValueField(required=False, widget=widgets.HiddenInput)
