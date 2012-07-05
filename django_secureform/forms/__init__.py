@@ -66,6 +66,12 @@ class HoneypotField(forms.CharField):
         super(HoneypotField, self).__init__(*args, **kwargs)
 
 
+class InitialValueField(forms.CharField):
+    "A field that always assumes the initial value."
+    def bound_data(self, data, initial):
+        return initial
+
+
 class SecureBoundField(BoundField):
     def _errors(self):
         """
@@ -105,7 +111,7 @@ class SecureForm(forms.Form):
         self.include_jquery = kwargs.pop('include_jquery', DEFAULT_INCLUDE_JQUERY)
         crypt_key = kwargs.pop('crypt_key', DEFAULT_CRYPT_KEY)
         self.crypt = Blowfish.new(crypt_key)
-        self.fields[self.secure_field_name] = forms.CharField(required=False, widget=widgets.HiddenInput)
+        self.fields[self.secure_field_name] = InitialValueField(required=False, widget=widgets.HiddenInput)
         self.__secured = False
         self._secure_field_map = {}
 
@@ -201,8 +207,8 @@ class SecureForm(forms.Form):
 
     def secure_data(self):
         "Prepares the secure data before the form is rendered."
-        # Rename the real fields, create a map of new random names to the rightful
-        # name
+        # Empty out the previous map, we will generate a new one.
+        self._secure_field_map = {}
         for name in self.fields.keys():
             if name == self.secure_field_name:
                 continue
