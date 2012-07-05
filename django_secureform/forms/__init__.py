@@ -139,11 +139,10 @@ class SecureForm(forms.Form):
         for honeypot in honeypots:
             orig = [c for c in honeypot]
             shuf = random.sample(orig, len(orig))
-            random.shuffle(shuf)
-            pos = map(shuf.index, orig)
+            pmap = map(shuf.index, orig)
             obs.extend([
                 'var %s = [\'%s\'];' % (name, '\', \''.join(shuf)),
-                '%s(%s);' % (func, ' + '.join(['%s[%s]' % (name, p) for p in pos]))
+                '%s(%s);' % (func, ' + '.join(['%s[%s]' % (name, p) for p in pmap]))
             ])
         scripts = [
             SCRIPT_TAG % dict(function=func, obfuscated='\n'.join(obs))
