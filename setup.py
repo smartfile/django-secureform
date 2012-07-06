@@ -60,6 +60,11 @@ Usage
 
     # Define your form class as usual.
     def MySecureForm(SecureForm):
+        class Meta:
+            # You can override any of the options in settings.py for an
+            # individual form class.
+            include_jquery = False
+
         name = forms.CharField()
 
 .. _SmartFile: http://www.smartfile.com/
