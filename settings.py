@@ -1,0 +1,1 @@
+SECUREFORM_CRYPT_KEY = 'test'
