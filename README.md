@@ -47,6 +47,10 @@ from django_secureform.forms import SecureForm
 
 
 # Define your form class as usual.
-def MySecureForm(SecureForm):
+class MySecureForm(SecureForm):
+    class Meta:
+        # Override options in settings.py for this class.
+        include_jquery = False
+
     name = forms.CharField()
 ```

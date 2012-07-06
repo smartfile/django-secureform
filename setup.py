@@ -59,10 +59,9 @@ Usage
 
 
     # Define your form class as usual.
-    def MySecureForm(SecureForm):
+    class MySecureForm(SecureForm):
         class Meta:
-            # You can override any of the options in settings.py for an
-            # individual form class.
+            # Override options in settings.py for this class.
             include_jquery = False
 
         name = forms.CharField()
