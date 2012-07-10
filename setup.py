@@ -9,13 +9,13 @@ versrel = version + '-' + release
 readme = 'README.rst'
 download_url = 'https://github.com/downloads/btimby/django-secureform' \
                            '/' + name + '-' + versrel + '.tar.gz'
-description = file(readme).read()
+long_description = file(readme).read()
 
 setup(
     name = name,
     version = versrel,
     description = 'Provides protection against spammers and scammers.',
-    long_description = description,
+    long_description = long_description,
     author = 'Ben Timby',
     author_email = 'btimby@gmail.com',
     maintainer = 'Ben Timby',
