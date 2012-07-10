@@ -1,12 +1,13 @@
 #!/bin/env python
 
+import os
 from distutils.core import setup
 
 name = 'django_secureform'
 version = '0.1'
 release = '2'
 versrel = version + '-' + release
-readme = 'README.rst'
+readme = os.path.join(os.path.dirname(__file__), 'README.rst')
 download_url = 'https://github.com/downloads/btimby/django-secureform' \
                            '/' + name + '-' + versrel + '.tar.gz'
 long_description = file(readme).read()
