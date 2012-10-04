@@ -3,12 +3,12 @@
 import os
 from distutils.core import setup
 
-name = 'django_secureform'
+name = 'django-secureform'
 version = '0.1'
-release = '2'
+release = '5'
 versrel = version + '-' + release
 readme = os.path.join(os.path.dirname(__file__), 'README.rst')
-download_url = 'https://github.com/downloads/btimby/django-secureform' \
+download_url = 'https://github.com/downloads/smartfile/' + name + \
                            '/' + name + '-' + versrel + '.tar.gz'
 long_description = file(readme).read()
 
@@ -21,7 +21,7 @@ setup(
     author_email = 'btimby@gmail.com',
     maintainer = 'Ben Timby',
     maintainer_email = 'btimby@gmail.com',
-    url = 'http://github.com/btimby/django-secureform/',
+    url = 'http://github.com/smartfile/' + name + '/',
     download_url = download_url,
     license = 'GPLv3',
     packages = [
