@@ -17,10 +17,10 @@ SAFE_CHARS = string.ascii_letters + string.digits
 
 JQUERY_TAG = '<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>'
 SCRIPT_TAG = '''<script type="text/javascript">
-function %(function)s(n) {
-    $('p, li, tr').has('input[id="id_' + n + '"]').remove();
-}
-%(obfuscated)s
+function %(function)s(n)
+{$('p'+','+'li,'+'tr')
+.has('input[id="id_' + n + '"]')
+.remove();}%(obfuscated)s
 </script>'''
 
 # Allow the user to specify an encryption key separate from the Django
@@ -28,9 +28,11 @@ function %(function)s(n) {
 DEFAULT_CRYPT_KEY = getattr(settings, 'SECUREFORM_CRYPT_KEY', getattr(settings, 'SECRET_KEY', None))
 # The user can override the secure field name.
 DEFAULT_FIELD_NAME = getattr(settings, 'SECUREFORM_FIELD_NAME', 'secure')
-# Give the user twenty minutes to fill out the form..
+# Give the user twenty minutes to fill out the form.
 DEFAULT_FORM_TTL = getattr(settings, 'SECUREFORM_TTL', 1200)
+# Inject random fields that are hidden from the user (and should be blank).
 DEFAULT_HONEYPOTS = getattr(settings, 'SECUREFORM_HONEYPOTS', 2)
+# Include jQuery, used to hide honeypots (probably could do the job without it).
 DEFAULT_INCLUDE_JQUERY = getattr(settings, 'SECUREFORM_INCLUDE_JQUERY', True)
 
 def random_name(choices=SAFE_CHARS, length=16):
@@ -38,26 +40,27 @@ def random_name(choices=SAFE_CHARS, length=16):
 
 
 class SecureFormException(Exception):
-    "Base exception for security faults."
+    'Base exception for security faults.'
 
 
 class StaleFormException(SecureFormException):
-    "Raised if a form's timestamp is too old."
+    'Raised if a form\'s timestamp is too old.'
 
 
 class ReplayedFormException(SecureFormException):
-    "Raised if a form's nonce value has been seen before."
+    'Raised if a form\'s nonce value has been seen before.'
 
 
 class HoneypotFormException(SecureFormException):
-    "Raised if a honeypot field receives a value."
+    'Raised if a honeypot field receives a value.'
 
 
 class InvalidFormException(SecureFormException):
-    "Raised if a fields do not map properly."
+    'Raised if a fields do not map properly.'
 
 
 class HoneypotField(forms.CharField):
+    'Just a CharField that we can easily identify with isinstance().'
     def __init__(self, *args, **kwargs):
         kwargs.update({
             'required': False,
@@ -67,23 +70,26 @@ class HoneypotField(forms.CharField):
 
 
 class InitialValueField(forms.CharField):
-    "A field that always assumes the initial value."
+    '''A field that always assumes the initial value. Used for the "secure" field
+    so that we can always control it's value.'''
     def bound_data(self, data, initial):
         return initial
 
 
 class SecureBoundField(BoundField):
+    '''The "secure" flavor of the BoundField. Handles translations between
+    secure names and rightful names.'''
+
     def _errors(self):
-        """
-        Translates errors from field's secure name to the regular name (which is
-        how errors are stored in the form.)
-        """
+        '''Translates errors from field's secure name to the regular name (which is
+        how errors are stored in the form.)'''
         name = self.form._secure_field_map.get(self.name)
         return self.form.errors.get(name, self.form.error_class())
     errors = property(_errors)
 
 
 class SecureFormOptions(object):
+    'Contains options for the SecureForm instance.'
     def __init__(self, options=None):
         self.secure_field_name = getattr(options, 'secure_field_name', DEFAULT_FIELD_NAME)
         self.form_ttl = getattr(options, 'form_ttl', DEFAULT_FORM_TTL)
@@ -92,6 +98,7 @@ class SecureFormOptions(object):
 
 
 class SecureFormMetaclass(DeclarativeFieldsMetaclass):
+    'Metaclass to collect the options from the special Meta class.'
     def __new__(cls, name, bases, attrs):
         new_class = super(SecureFormMetaclass, cls).__new__(cls, name, bases, attrs)
         new_class._meta = SecureFormOptions(getattr(new_class, 'Meta', None))
@@ -127,6 +134,8 @@ class SecureFormBase(forms.Form):
         self._secure_field_map = {}
 
     def __iter__(self):
+        '''Iterates through the form fields, after ensuring that the security data,
+        including all additional fields are in place.'''
         if not self.__secured:
             # Only secure on the first iteration.
             self.__secured = True
@@ -135,7 +144,7 @@ class SecureFormBase(forms.Form):
             yield self[name]
 
     def __getitem__(self, name):
-        "Returns a BoundField with the given name."
+        'Returns a SecureBoundField with the given name.'
         try:
             field = self.fields[name]
         except KeyError:
@@ -143,6 +152,8 @@ class SecureFormBase(forms.Form):
         return SecureBoundField(self, field, name)
 
     def _script(self):
+        '''Generates the JavaScript necessary for hiding the honeypots or an empty string
+        if no honeypots are requested.'''
         if not self._meta.honeypots:
             return ''
         honeypots = [n for (n, f) in self.fields.items() if isinstance(f, HoneypotField)]
@@ -155,7 +166,7 @@ class SecureFormBase(forms.Form):
             pmap = map(shuf.index, orig)
             obs.extend([
                 'var %s = [\'%s\'];' % (name, '\', \''.join(shuf)),
-                '%s(%s);' % (func, ' + '.join(['%s[%s]' % (name, p) for p in pmap]))
+                '(%s);' % '+'.join(['%s[%s]' % (name, p) for p in pmap])
             ])
         scripts = [
             SCRIPT_TAG % dict(function=func, obfuscated='\n'.join(obs))
@@ -166,6 +177,9 @@ class SecureFormBase(forms.Form):
     script = property(_script)
 
     def decode_data(self):
+        '''The workhorse for validating inbound POST or GET data. It will verify the TTL and
+        nonce. If those are valid, then the fields are converted back to their rightful names
+        and while the honeypots are checked to ensure they are empty.'''
         if not self.is_bound:
             return
         cleaned_data = {}
@@ -179,10 +193,11 @@ class SecureFormBase(forms.Form):
                                        self._meta.form_ttl)
         nonce = secure['n']
         if cache.get(nonce) != None:
-            # Our nonce is in our cache, it has been seend, possible replay!
+            # Our nonce is in our cache, it has been seen, possible replay!
             raise ReplayedFormException(_('This form has already been submitted.'))
-        # We only need to keep the nonce around for as long as the ttl (timeout). After
-        # that, the timestamp check will refuse the form.
+        # We only need to keep the nonce around for as long as the TTL (timeout). After
+        # that, the timestamp check will refuse the form. That is the whole idea behind
+        # the TTL/timeout, we can't guarantee the cache's availability long-term.
         cache.set(nonce, nonce, self._meta.form_ttl)
         self._secure_field_map = secure['f']
         for sname, name in self._secure_field_map.items():
@@ -204,7 +219,8 @@ class SecureFormBase(forms.Form):
         self.data = cleaned_data
 
     def _clean_secure(self):
-        "Uses decode_data() to convert fields back to their rightful names."
+        '''Uses decode_data() to convert fields back to their rightful names. Turns exceptions
+        into validation errors.'''
         try:
             self.decode_data()
         except SecureFormException, e:
@@ -213,14 +229,14 @@ class SecureFormBase(forms.Form):
             self._errors[NON_FIELD_ERRORS] = self.error_class([_('Form verification failed. Please try again.')])
 
     def full_clean(self):
-        "Does secureform validation, then regular validation."
+        'Does secureform validation, then regular validation.'
         self._errors = ErrorDict()
         self._clean_secure()
         if not self._errors:
             super(SecureFormBase, self).full_clean()
 
     def secure_data(self):
-        "Prepares the secure data before the form is rendered."
+        'Prepares the secure data before the form is rendered.'
         # Empty out the previous map, we will generate a new one.
         self._secure_field_map = {}
         labels = []
@@ -235,7 +251,9 @@ class SecureFormBase(forms.Form):
             if not field.label:
                 # Pretty-up the name, just like BoundField.
                 field.label = pretty_name(name)
-            labels.append(field.label)
+            # We keep a list of labels to use for our honeypots (if requested).
+            if self._meta.honeypots:
+                labels.append(field.label)
         # Add in some honeypots (if asked to).
         for i in range(1, self._meta.honeypots):
             sname = random_name()
@@ -243,11 +261,13 @@ class SecureFormBase(forms.Form):
             # Don't always put the honeypot fields at the end of the form.
             i = random.randint(0, len(self.fields) - 1)
             # Give the honeypot a label cloned from a legit field.
-            rlabel = random.choice(labels)
-            self.fields.insert(i, sname, HoneypotField(label=rlabel))
+            self.fields.insert(i, sname, HoneypotField(label=random.choice(labels)))
         secure = {
+            # We preserve the time stamp, this lets us enforce the TTL.
             't': time.time(),
+            # The nonce is just a random value that we can remember to ensure no replays.
             'n': random_name(),
+            # And finally, the map of secure field names to rightful field names.
             'f': self._secure_field_map,
         }
         secure = simplejson.dumps(secure)
