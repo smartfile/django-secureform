@@ -87,6 +87,13 @@ class SecureBoundField(BoundField):
         return self.form.errors.get(name, self.form.error_class())
     errors = property(_errors)
 
+    def _data(self):
+        '''Get data using the secure field name. Ensures bound forms are not reset to
+        blank values.'''
+        name = self.form._secure_field_map.get(self.name)
+        return self.field.widget.value_from_datadict(self.form.data, self.form.files, name)
+    data = property(_data)
+
 
 class SecureFormOptions(object):
     'Contains options for the SecureForm instance.'
@@ -166,7 +173,7 @@ class SecureFormBase(forms.Form):
             pmap = map(shuf.index, orig)
             obs.extend([
                 'var %s = [\'%s\'];' % (name, '\', \''.join(shuf)),
-                '(%s);' % '+'.join(['%s[%s]' % (name, p) for p in pmap])
+                '%s(%s);' % (func, '+'.join(['%s[%s]' % (name, p) for p in pmap])),
             ])
         scripts = [
             SCRIPT_TAG % dict(function=func, obfuscated='\n'.join(obs))
