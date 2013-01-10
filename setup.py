@@ -8,8 +8,8 @@ version = '0.1'
 release = '7'
 versrel = version + '-' + release
 readme = os.path.join(os.path.dirname(__file__), 'README.rst')
-download_url = 'https://github.com/downloads/smartfile/' + name + \
-                           '/' + name + '-' + versrel + '.tar.gz'
+download_url = 'https://github.com/smartfile/' + name + \
+               '/archive/' + versrel + '.zip'
 long_description = file(readme).read()
 
 setup(
