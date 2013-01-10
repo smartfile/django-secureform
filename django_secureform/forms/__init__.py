@@ -94,6 +94,24 @@ class SecureBoundField(BoundField):
         return self.field.widget.value_from_datadict(self.form.data, self.form.files, name)
     data = property(_data)
 
+    def value(self):
+        """
+        Returns the value for this BoundField, using the initial value if
+        the form is not bound or the data otherwise. Takes care of secure name
+        conversion.
+        """
+        name = self.form._secure_field_map.get(self.name)
+        initial = self.form.initial.get(name, self.field.initial)
+        if not self.form.is_bound:
+            data = initial
+            if callable(data):
+                data = data()
+        else:
+            data = self.field.bound_data(
+                self.data, initial
+            )
+        return self.field.prepare_value(data)
+
 
 class SecureFormOptions(object):
     'Contains options for the SecureForm instance.'
