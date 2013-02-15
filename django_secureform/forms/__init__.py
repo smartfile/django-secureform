@@ -216,9 +216,9 @@ class SecureFormBase(forms.Form):
         if timestamp < time.time() - self._meta.form_ttl:
             # Form data is too old, reject the form.
             raise StaleFormException(_('The form data is more than %s seconds old.') %
-                                       self._meta.form_ttl)
+                                     self._meta.form_ttl)
         nonce = secure['n']
-        if cache.get(nonce) != None:
+        if cache.get(nonce) is not None:
             # Our nonce is in our cache, it has been seen, possible replay!
             raise ReplayedFormException(_('This form has already been submitted.'))
         # We only need to keep the nonce around for as long as the TTL (timeout). After
