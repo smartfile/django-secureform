@@ -1,3 +1,7 @@
+.. figure:: https://travis-ci.org/smartfile/django-secureform.png
+   :alt: Travis CI Status
+   :target: https://travis-ci.org/smartfile/django-secureform
+
 A `SmartFile`_ Open Source project. `Read more`_ about how SmartFile
 uses and contributes to Open Source software.
 

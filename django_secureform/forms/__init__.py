@@ -35,6 +35,7 @@ DEFAULT_HONEYPOTS = getattr(settings, 'SECUREFORM_HONEYPOTS', 2)
 # Include jQuery, used to hide honeypots (probably could do the job without it).
 DEFAULT_INCLUDE_JQUERY = getattr(settings, 'SECUREFORM_INCLUDE_JQUERY', True)
 
+
 def random_name(choices=SAFE_CHARS, length=16):
     return ''.join(random.sample(choices, length))
 
