@@ -7,7 +7,10 @@ from django.conf import settings
 from django.core.cache import cache
 from django.forms import widgets
 from django.forms.util import ErrorDict
-from django.forms.forms import pretty_name, NON_FIELD_ERRORS, BoundField, DeclarativeFieldsMetaclass
+from django.forms.forms import pretty_name
+from django.forms.forms import NON_FIELD_ERRORS
+from django.forms.forms import BoundField
+from django.forms.forms import DeclarativeFieldsMetaclass
 from django.utils import simplejson
 from django.utils.translation import ugettext as _
 from django.utils.safestring import mark_safe
