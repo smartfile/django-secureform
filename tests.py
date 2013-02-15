@@ -7,21 +7,21 @@ from django.forms.forms import NON_FIELD_ERRORS
 from django_secureform.forms import SecureForm
 
 
-def getForm_sname(form, name):
+def get_form_sname(form, name):
     for sname, v in form._secure_field_map.items():
         if v and v == name:
             return sname
     raise KeyError(name)
 
 
-def getForm_honeypot(form):
+def get_form_honeypot(form):
     for sname, v in form._secure_field_map.items():
         if v is None:
             return sname
     raise Exception('No honeypots found.')
 
 
-def getForm_secure_data(form):
+def get_form_secure_data(form):
     # We must copy over the security data.
     return form._meta.secure_field_name, form[form._meta.secure_field_name].value()
 
@@ -42,9 +42,9 @@ class FormTestCase(unittest.TestCase):
                         iterable))
 
     def getForm(self, **kwargs):
-        data = dict((getForm_secure_data(self.form), ))
+        data = dict((get_form_secure_data(self.form), ))
         for n, v in kwargs.items():
-            data[getForm_sname(self.form, n)] = v
+            data[get_form_sname(self.form, n)] = v
         return self.klass(data=data)
 
 
@@ -67,10 +67,10 @@ class BasicTestCase(FormTestCase):
         self.assertIn('This form has already been submitted.', post._errors[NON_FIELD_ERRORS])
 
     def test_honeypot(self):
-        honeypot = getForm_honeypot(self.form)
-        data = dict((getForm_secure_data(self.form), ))
+        honeypot = get_form_honeypot(self.form)
+        data = dict((get_form_secure_data(self.form), ))
         data[honeypot] = 'mmm, hunny!'
-        data[getForm_sname(self.form, 'name')] = 'foobar'
+        data[get_form_sname(self.form, 'name')] = 'foobar'
         post = self.klass(data=data)
         self.assertFalse(post.is_valid())
         self.assertIn(NON_FIELD_ERRORS, post._errors)
