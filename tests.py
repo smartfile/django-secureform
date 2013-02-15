@@ -7,21 +7,21 @@ from django.forms.forms import NON_FIELD_ERRORS
 from django_secureform.forms import SecureForm
 
 
-def get_form_sname(form, name):
+def getForm_sname(form, name):
     for sname, v in form._secure_field_map.items():
         if v and v == name:
             return sname
     raise KeyError(name)
 
 
-def get_form_honeypot(form):
+def getForm_honeypot(form):
     for sname, v in form._secure_field_map.items():
         if v is None:
             return sname
     raise Exception('No honeypots found.')
 
 
-def get_form_secure_data(form):
+def getForm_secure_data(form):
     # We must copy over the security data.
     return form._meta.secure_field_name, form[form._meta.secure_field_name].value()
 
@@ -37,36 +37,40 @@ class FormTestCase(unittest.TestCase):
         self.form = self.klass()
         self.form.secure_data()
 
-    def get_form(self, **kwargs):
-        data = dict((get_form_secure_data(self.form), ))
+    def assertIn(self, value, iterable):
+        self.assertTrue(value in iterable, '%s did not occur in %s' % (value,
+                        iterable))
+
+    def getForm(self, **kwargs):
+        data = dict((getForm_secure_data(self.form), ))
         for n, v in kwargs.items():
-            data[get_form_sname(self.form, n)] = v
+            data[getForm_sname(self.form, n)] = v
         return self.klass(data=data)
 
 
 class BasicTestCase(FormTestCase):
     def test_valid(self):
-        post = self.get_form(name='foobar')
+        post = self.getForm(name='foobar')
         self.assertTrue(post.is_valid())
 
     def test_missing(self):
-        post = self.get_form()
+        post = self.getForm()
         self.assertFalse(post.is_valid())
         self.assertIn('name', post._errors)
 
     def test_replay(self):
-        post = self.get_form(name='foobar')
+        post = self.getForm(name='foobar')
         post.is_valid()
-        post = self.get_form(name='foobar')
+        post = self.getForm(name='foobar')
         self.assertFalse(post.is_valid())
         self.assertIn(NON_FIELD_ERRORS, post._errors)
         self.assertIn('This form has already been submitted.', post._errors[NON_FIELD_ERRORS])
 
     def test_honeypot(self):
-        honeypot = get_form_honeypot(self.form)
-        data = dict((get_form_secure_data(self.form), ))
+        honeypot = getForm_honeypot(self.form)
+        data = dict((getForm_secure_data(self.form), ))
         data[honeypot] = 'mmm, hunny!'
-        data[get_form_sname(self.form, 'name')] = 'foobar'
+        data[getForm_sname(self.form, 'name')] = 'foobar'
         post = self.klass(data=data)
         self.assertFalse(post.is_valid())
         self.assertIn(NON_FIELD_ERRORS, post._errors)
