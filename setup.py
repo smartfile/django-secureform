@@ -4,8 +4,8 @@ import os
 from distutils.core import setup
 
 name = 'django-secureform'
-version = '0.1'
-release = '7'
+version = '0.2'
+release = '1'
 versrel = version + '-' + release
 readme = os.path.join(os.path.dirname(__file__), 'README.rst')
 long_description = file(readme).read()
