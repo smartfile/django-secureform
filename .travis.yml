@@ -13,7 +13,6 @@ install:
   - pip install --timeout=30 -r requirements.txt --use-mirrors
   - pip install --timeout=30 -q -e . --use-mirrors
 before_script:
-  - "pep8 --exclude=migrations --ignore=E501,E225 django_secureform"
-  - pyflakes -x W django_secureform
+  - make verify
 script:
   - make test
