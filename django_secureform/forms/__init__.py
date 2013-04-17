@@ -1,7 +1,9 @@
 import time
 import string
+
 from Crypto.Random import random
 from Crypto.Cipher import Blowfish
+
 from django import forms
 from django.conf import settings
 from django.core.cache import cache
@@ -14,6 +16,7 @@ from django.forms.forms import DeclarativeFieldsMetaclass
 from django.utils import simplejson
 from django.utils.translation import ugettext as _
 from django.utils.safestring import mark_safe
+
 
 # Chars that are safe to use in field names.
 SAFE_CHARS = string.ascii_letters + string.digits
@@ -41,6 +44,14 @@ DEFAULT_INCLUDE_JQUERY = getattr(settings, 'SECUREFORM_INCLUDE_JQUERY', True)
 
 def random_name(choices=SAFE_CHARS, length=16):
     return ''.join(random.sample(choices, length))
+
+
+def testing():
+    """
+    Detects if we are running under Django unit tests. If so, security is
+    disabled.
+    """
+    return getattr(settings, 'TESTING', False)
 
 
 class SecureFormException(Exception):
@@ -174,11 +185,12 @@ class SecureFormBase(forms.Form):
 
     def __getitem__(self, name):
         'Returns a SecureBoundField with the given name.'
-        try:
-            field = self.fields[name]
-        except KeyError:
-            raise KeyError('Key %r not found in Form' % name)
-        return SecureBoundField(self, field, name)
+        if not testing():
+            try:
+                    return SecureBoundField(self, self.fields[name], name)
+            except KeyError:
+                raise KeyError('Key %r not found in Form' % name)
+        return super(SecureFormBase, self).__getitem__(name)
 
     def _script(self):
         '''Generates the JavaScript necessary for hiding the honeypots or an empty string
@@ -210,6 +222,8 @@ class SecureFormBase(forms.Form):
         nonce. If those are valid, then the fields are converted back to their rightful names
         and while the honeypots are checked to ensure they are empty.'''
         if not self.is_bound:
+            return
+        if testing():
             return
         cleaned_data = {}
         secure = self.data[self._meta.secure_field_name]
@@ -266,6 +280,8 @@ class SecureFormBase(forms.Form):
 
     def secure_data(self):
         'Prepares the secure data before the form is rendered.'
+        if testing():
+            return
         # Empty out the previous map, we will generate a new one.
         self._secure_field_map = {}
         labels = []

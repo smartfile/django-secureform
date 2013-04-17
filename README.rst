@@ -59,5 +59,24 @@ Usage
 
         name = forms.CharField()
 
+
+Unit Testing
+------------
+
+If you want to write unit tests for forms that derive from SecureForm, you will
+need to let this application know you are testing. SecureForm looks for
+settings.TESTING to evaluate to True. If so, it disables the security allowing
+the Django test client to send POST data using the original field names.
+
+In the future, I would rather provide tools so that testing can happen with
+security enabled, but this is a quick workaround. Our test framework uses an
+environment variable to set settings.TESTING. For example, in settings.py...
+
+::
+
+    import os
+
+    TESTING = True if 'TESTING' in os.environ else False
+
 .. _SmartFile: http://www.smartfile.com/
 .. _Read more: http://www.smartfile.com/open-source.html
