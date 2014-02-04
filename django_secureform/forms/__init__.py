@@ -24,7 +24,7 @@ SAFE_CHARS = string.ascii_letters + string.digits
 JQUERY_TAG = '<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>'
 SCRIPT_TAG = '''<script type="text/javascript">
 function %(function)s(n)
-{$('p'+','+'li,'+'tr')
+{$('p'+','+'li,'+'tr'+',div.control-group')
 .has('input[id="id_' + n + '"]')
 .remove();}%(obfuscated)s
 </script>'''
