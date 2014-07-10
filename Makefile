@@ -2,7 +2,7 @@ test:
 	python tests.py
 
 verify:
-	pyflakes -x W django_secureform
+	pyflakes django_secureform
 	pep8 --exclude=migrations --ignore=E501,E225 django_secureform
 
 install:
