@@ -16,7 +16,12 @@ Provides protection against spammers and scammers.
 Installation
 ------------
 
-Install using pip `pip install django-secureform`
+Install using pip:
+
+::
+
+
+   pip install django-secureform
 
 Then install the application into your Django project in settings.py. There are also optional settings
 which will affect the behavior of SecureForm instances.
