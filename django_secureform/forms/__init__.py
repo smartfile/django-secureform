@@ -1,3 +1,4 @@
+import django
 import time
 import string
 
@@ -13,9 +14,15 @@ from django.forms.forms import pretty_name
 from django.forms.forms import NON_FIELD_ERRORS
 from django.forms.forms import BoundField
 from django.forms.forms import DeclarativeFieldsMetaclass
-from django.utils import simplejson
 from django.utils.translation import ugettext as _
 from django.utils.safestring import mark_safe
+
+try:
+    # Django <= 1.6 backwards compatibility
+    from django.utils import simplejson as json
+except ImportError:
+    # Django >= 1.7
+    import json
 
 
 # Chars that are safe to use in field names.
@@ -228,7 +235,7 @@ class SecureFormBase(forms.Form):
         cleaned_data = {}
         secure = self.data[self._meta.secure_field_name]
         secure = self.crypt.decrypt(secure.decode('hex')).rstrip()
-        secure = simplejson.loads(secure)
+        secure = json.loads(secure)
         timestamp = secure['t']
         if timestamp < time.time() - self._meta.form_ttl:
             # Form data is too old, reject the form.
@@ -306,7 +313,16 @@ class SecureFormBase(forms.Form):
             # Don't always put the honeypot fields at the end of the form.
             i = random.randint(0, len(self.fields) - 1)
             # Give the honeypot a label cloned from a legit field.
-            self.fields.insert(i, sname, HoneypotField(label=random.choice(labels)))
+            if django.VERSION < (1, 7):
+                self.fields.insert(i, sname, HoneypotField(label=random.choice(labels)))
+            else:
+                import collections
+                fields = collections.OrderedDict()
+                for index, (key, value) in enumerate(self.fields.items()):
+                    if index == i:
+                        fields.update({sname: HoneypotField(label=random.choice(labels))})
+                    fields.update({key: value})
+                self.fields = fields
         secure = {
             # We preserve the time stamp, this lets us enforce the TTL.
             't': time.time(),
@@ -315,7 +331,7 @@ class SecureFormBase(forms.Form):
             # And finally, the map of secure field names to rightful field names.
             'f': self._secure_field_map,
         }
-        secure = simplejson.dumps(secure)
+        secure = json.dumps(secure)
         # Pad to length divisible by 8.
         secure += ' ' * (8 - (len(secure) % 8))
         secure = self.crypt.encrypt(secure)

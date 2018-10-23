@@ -1,6 +1,11 @@
 import os
 import unittest
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+
+import django
+if django.VERSION >= (1, 7):
+    django.setup()
+
 from django import forms
 from django.db import models
 from django.forms.forms import NON_FIELD_ERRORS
