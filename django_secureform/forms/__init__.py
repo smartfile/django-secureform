@@ -1,4 +1,4 @@
-from collections import OrderedDict
+import django
 import time
 import string
 
@@ -307,16 +307,22 @@ class SecureFormBase(forms.Form):
             if self._meta.honeypots:
                 labels.append(field.label)
         # Add in some honeypots (if asked to).
-        fields = OrderedDict()
-        fields.update({self._meta.secure_field_name: self.fields[self._meta.secure_field_name]})
         for i in range(1, self._meta.honeypots):
             sname = random_name()
             self._secure_field_map[sname] = None
             # Don't always put the honeypot fields at the end of the form.
             i = random.randint(0, len(self.fields) - 1)
             # Give the honeypot a label cloned from a legit field.
-            fields.update({sname: HoneypotField(label=random.choice(labels))})
-        self.fields = fields
+            if django.VERSION < (1, 7):
+                self.fields.insert(i, sname, HoneypotField(label=random.choice(labels)))
+            else:
+                import collections
+                fields = collections.OrderedDict()
+                for index, (key, value) in enumerate(self.fields.items()):
+                    if index == i:
+                        fields.update({sname: HoneypotField(label=random.choice(labels))})
+                    fields.update({key: value})
+                self.fields = fields
         secure = {
             # We preserve the time stamp, this lets us enforce the TTL.
             't': time.time(),
