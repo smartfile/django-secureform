@@ -5,7 +5,6 @@ import string
 from Crypto.Random import random
 from Crypto.Cipher import Blowfish
 
-import django
 from django import forms
 from django.conf import settings
 from django.core.cache import cache
