@@ -10,17 +10,17 @@ from django.conf import settings
 from django.core.cache import cache
 from django.forms import widgets
 
-if django.VERSION < (1, 7):
-    from django.forms.util import ErrorDict
-else:
-    from django.forms.util import ErrorDict
-
 from django.forms.forms import pretty_name
 from django.forms.forms import NON_FIELD_ERRORS
 from django.forms.forms import BoundField
 from django.forms.forms import DeclarativeFieldsMetaclass
 from django.utils.translation import ugettext as _
 from django.utils.safestring import mark_safe
+
+if django.VERSION < (1, 7):
+    from django.forms.util import ErrorDict
+else:
+    from django.forms.utils import ErrorDict
 
 try:
     # Django <= 1.6 backwards compatibility
