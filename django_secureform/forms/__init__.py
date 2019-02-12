@@ -5,11 +5,17 @@ import string
 from Crypto.Random import random
 from Crypto.Cipher import Blowfish
 
+import django
 from django import forms
 from django.conf import settings
 from django.core.cache import cache
 from django.forms import widgets
-from django.forms.util import ErrorDict
+
+if django.VERSION < (1, 7):
+    from django.forms.util import ErrorDict
+else:
+    from django.forms.util import ErrorDict
+
 from django.forms.forms import pretty_name
 from django.forms.forms import NON_FIELD_ERRORS
 from django.forms.forms import BoundField
