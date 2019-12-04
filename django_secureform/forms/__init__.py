@@ -209,14 +209,14 @@ class SecureFormBase(forms.Form):
         if no honeypots are requested.'''
         if not self._meta.honeypots:
             return ''
-        honeypots = [n for (n, f) in self.fields.items() if isinstance(f, HoneypotField)]
+        honeypots = [n for (n, f) in list(self.fields.items()) if isinstance(f, HoneypotField)]
         func = random_name(choices=string.letters)
         name = random_name(choices=string.letters, length=2)
         obs = []
         for honeypot in honeypots:
             orig = [c for c in honeypot]
             shuf = random.sample(orig, len(orig))
-            pmap = map(shuf.index, orig)
+            pmap = list(map(shuf.index, orig))
             obs.extend([
                 'var %s = [\'%s\'];' % (name, '\', \''.join(shuf)),
                 '%s(%s);' % (func, '+'.join(['%s[%s]' % (name, p) for p in pmap])),
@@ -255,7 +255,7 @@ class SecureFormBase(forms.Form):
         # the TTL/timeout, we can't guarantee the cache's availability long-term.
         cache.set(nonce, nonce, self._meta.form_ttl)
         self._secure_field_map = secure['f']
-        for sname, name in self._secure_field_map.items():
+        for sname, name in list(self._secure_field_map.items()):
             if name == self._meta.secure_field_name:
                 cleaned_data[name] = self.data[name]
                 continue
@@ -278,9 +278,9 @@ class SecureFormBase(forms.Form):
         into validation errors.'''
         try:
             self.decode_data()
-        except SecureFormException, e:
+        except SecureFormException as e:
             self._errors[NON_FIELD_ERRORS] = self.error_class([str(e)])
-        except Exception, e:
+        except Exception as e:
             self._errors[NON_FIELD_ERRORS] = self.error_class([_('Form verification failed. Please try again.')])
 
     def full_clean(self):
@@ -297,7 +297,7 @@ class SecureFormBase(forms.Form):
         # Empty out the previous map, we will generate a new one.
         self._secure_field_map = {}
         labels = []
-        for name in self.fields.keys():
+        for name in list(self.fields.keys()):
             if name == self._meta.secure_field_name:
                 continue
             sname = random_name()
@@ -343,5 +343,5 @@ class SecureFormBase(forms.Form):
         self.fields[self._meta.secure_field_name].initial = secure.encode('hex')
 
 
-class SecureForm(SecureFormBase):
-    __metaclass__ = SecureFormMetaclass
+class SecureForm(SecureFormBase, metaclass=SecureFormMetaclass):
+    pass

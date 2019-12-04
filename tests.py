@@ -13,14 +13,14 @@ from django_secureform.forms import SecureForm
 
 
 def get_form_sname(form, name):
-    for sname, v in form._secure_field_map.items():
+    for sname, v in list(form._secure_field_map.items()):
         if v and v == name:
             return sname
     raise KeyError(name)
 
 
 def get_form_honeypot(form):
-    for sname, v in form._secure_field_map.items():
+    for sname, v in list(form._secure_field_map.items()):
         if v is None:
             return sname
     raise Exception('No honeypots found.')
@@ -48,7 +48,7 @@ class FormTestCase(unittest.TestCase):
 
     def getForm(self, **kwargs):
         data = dict((get_form_secure_data(self.form), ))
-        for n, v in kwargs.items():
+        for n, v in list(kwargs.items()):
             data[get_form_sname(self.form, n)] = v
         return self.klass(data=data)
 
