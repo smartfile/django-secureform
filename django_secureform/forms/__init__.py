@@ -280,7 +280,7 @@ class SecureFormBase(forms.Form):
             self.decode_data()
         except SecureFormException as e:
             self._errors[NON_FIELD_ERRORS] = self.error_class([str(e)])
-        except Exception as e:
+        except Exception:
             self._errors[NON_FIELD_ERRORS] = self.error_class([_('Form verification failed. Please try again.')])
 
     def full_clean(self):
