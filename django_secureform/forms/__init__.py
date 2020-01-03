@@ -1,3 +1,4 @@
+import binascii
 import django
 import time
 import string
@@ -239,7 +240,7 @@ class SecureFormBase(forms.Form):
             return
         cleaned_data = {}
         secure = self.data[self._meta.secure_field_name]
-        secure = self.crypt.decrypt(secure.decode('hex')).rstrip()
+        secure = self.crypt.decrypt(bytes.fromhex(secure.decode('utf-8'))).rstrip()
         secure = json.loads(secure)
         timestamp = secure['t']
         if timestamp < time.time() - self._meta.form_ttl:
@@ -340,7 +341,7 @@ class SecureFormBase(forms.Form):
         # Pad to length divisible by 8.
         secure += ' ' * (8 - (len(secure) % 8))
         secure = self.crypt.encrypt(secure)
-        self.fields[self._meta.secure_field_name].initial = secure.encode('hex')
+        self.fields[self._meta.secure_field_name].initial = binascii.hexlify(secure)
 
 
 class SecureForm(SecureFormBase, metaclass=SecureFormMetaclass):
