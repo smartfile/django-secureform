@@ -210,8 +210,8 @@ class SecureFormBase(forms.Form):
         if not self._meta.honeypots:
             return ''
         honeypots = [n for (n, f) in list(self.fields.items()) if isinstance(f, HoneypotField)]
-        func = random_name(choices=string.letters)
-        name = random_name(choices=string.letters, length=2)
+        func = random_name(choices=string.ascii_letters)
+        name = random_name(choices=string.ascii_letters, length=2)
         obs = []
         for honeypot in honeypots:
             orig = [c for c in honeypot]
