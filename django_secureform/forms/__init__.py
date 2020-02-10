@@ -240,7 +240,9 @@ class SecureFormBase(forms.Form):
             return
         cleaned_data = {}
         secure = self.data[self._meta.secure_field_name]
-        secure = self.crypt.decrypt(bytes.fromhex(secure.decode('utf-8'))).rstrip()
+        if isinstance(secure, bytes):
+            secure = secure.decode('utf-8')
+        secure = self.crypt.decrypt(bytes.fromhex(secure)).rstrip()
         secure = json.loads(secure)
         timestamp = secure['t']
         if timestamp < time.time() - self._meta.form_ttl:
