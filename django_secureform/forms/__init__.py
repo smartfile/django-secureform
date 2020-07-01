@@ -346,7 +346,7 @@ class SecureFormBase(forms.Form):
         # Pad to length divisible by 8.
         secure += ' ' * (8 - (len(secure) % 8))
         secure = self.crypt.encrypt(secure)
-        self.fields[self._meta.secure_field_name].initial = binascii.hexlify(secure)
+        self.fields[self._meta.secure_field_name].initial = binascii.hexlify(secure).decode('utf-8')
 
 
 class SecureForm(SecureFormBase, metaclass=SecureFormMetaclass):
