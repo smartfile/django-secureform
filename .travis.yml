@@ -6,6 +6,9 @@ env:
   - DJANGO=1.9
   - DJANGO=1.10
   - DJANGO=1.11
+  - DJANGO=2.0
+  - DJANGO=2.1
+  - DJANGO=2.2
 install:
   - pip install --timeout=30 -q Django==$DJANGO
   - pip install --timeout=30 pep8
