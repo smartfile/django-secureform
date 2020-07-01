@@ -103,9 +103,6 @@ class InitialValueField(forms.CharField):
     def bound_data(self, data, initial):
         return initial
 
-    def to_python(self, value):
-        return value
-
 
 class SecureBoundField(BoundField):
     '''The "secure" flavor of the BoundField. Handles translations between
