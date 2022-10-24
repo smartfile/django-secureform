@@ -1,10 +1,10 @@
 import binascii
 import django
 import time
+import secrets
 import string
 
-from Crypto.Random import random
-from Crypto.Cipher import Blowfish
+from cryptography.fernet import Fernet
 
 from django import forms
 from django.conf import settings
@@ -12,7 +12,6 @@ from django.core.cache import cache
 from django.forms import widgets
 from django.forms.forms import NON_FIELD_ERRORS
 from django.forms.forms import DeclarativeFieldsMetaclass
-from django.utils.translation import ugettext as _
 from django.utils.safestring import mark_safe
 
 if django.VERSION < (3, 0):
@@ -33,6 +32,11 @@ try:
 except ImportError:
     # Django >= 1.7
     import json
+
+if django.VERSION < (3, 0):
+    from django.utils.translation import ugettext as _
+else:
+    from django.utils.translation import gettext as _
 
 
 # Chars that are safe to use in field names.
@@ -60,7 +64,7 @@ DEFAULT_INCLUDE_JQUERY = getattr(settings, 'SECUREFORM_INCLUDE_JQUERY', True)
 
 
 def random_name(choices=SAFE_CHARS, length=16):
-    return ''.join(random.sample(choices, length))
+    return ''.join(secrets.SystemRandom().sample(choices, length))
 
 
 def testing():
@@ -185,7 +189,7 @@ class SecureFormBase(forms.Form):
         super(SecureFormBase, self).__init__(*args, **kwargs)
         # Use defaults, unless the caller overrode them.
         crypt_key = kwargs.pop('crypt_key', DEFAULT_CRYPT_KEY)
-        self.crypt = Blowfish.new(crypt_key)
+        self.crypt = Fernet(crypt_key)
         self.fields[self._meta.secure_field_name] = InitialValueField(required=False, widget=widgets.HiddenInput)
         self.__secured = False
         self._secure_field_map = {}
@@ -220,7 +224,7 @@ class SecureFormBase(forms.Form):
         obs = []
         for honeypot in honeypots:
             orig = [c for c in honeypot]
-            shuf = random.sample(orig, len(orig))
+            shuf = secrets.SystemRandom().sample(orig, len(orig))
             pmap = list(map(shuf.index, orig))
             obs.extend([
                 'var %s = [\'%s\'];' % (name, '\', \''.join(shuf)),
@@ -323,16 +327,16 @@ class SecureFormBase(forms.Form):
             sname = random_name()
             self._secure_field_map[sname] = None
             # Don't always put the honeypot fields at the end of the form.
-            i = random.randint(0, len(self.fields) - 1)
+            i = secrets.randbelow(len(self.fields) - 1)
             # Give the honeypot a label cloned from a legit field.
             if django.VERSION < (1, 7):
-                self.fields.insert(i, sname, HoneypotField(label=random.choice(labels)))
+                self.fields.insert(i, sname, HoneypotField(label=secrets.choice(labels)))
             else:
                 import collections
                 fields = collections.OrderedDict()
                 for index, (key, value) in enumerate(self.fields.items()):
                     if index == i:
-                        fields.update({sname: HoneypotField(label=random.choice(labels))})
+                        fields.update({sname: HoneypotField(label=secrets.choice(labels))})
                     fields.update({key: value})
                 self.fields = fields
         secure = {
@@ -346,7 +350,7 @@ class SecureFormBase(forms.Form):
         secure = json.dumps(secure)
         # Pad to length divisible by 8.
         secure += ' ' * (8 - (len(secure) % 8))
-        secure = self.crypt.encrypt(secure)
+        secure = self.crypt.encrypt(secure.encode('utf8'))
         self.fields[self._meta.secure_field_name].initial = binascii.hexlify(secure).decode('utf-8')
 
 

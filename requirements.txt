@@ -1,2 +1,2 @@
-pycrypto
+cryptography==2.9
 Django>=1.2.3
