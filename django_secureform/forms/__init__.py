@@ -126,7 +126,7 @@ class SecureBoundField(BoundField):
     def _data(self):
         '''Get data using the secure field name. Ensures bound forms are not reset to
         blank values.'''
-        name = self.form._secure_field_map.get(self.name)
+        name = self.form._secure_field_map.get(self.name) if self.name in self.form._secure_field_map else self.name
         return self.field.widget.value_from_datadict(self.form.data, self.form.files, name)
     data = property(_data)
 
@@ -136,7 +136,7 @@ class SecureBoundField(BoundField):
         the form is not bound or the data otherwise. Takes care of secure name
         conversion.
         """
-        name = self.form._secure_field_map.get(self.name)
+        name = self.form._secure_field_map.get(self.name) if self.name in self.form._secure_field_map else self.name
         initial = self.form.initial.get(name, self.field.initial)
         if not self.form.is_bound:
             data = initial
